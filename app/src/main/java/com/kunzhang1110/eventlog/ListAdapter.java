@@ -1,5 +1,8 @@
 package com.kunzhang1110.eventlog;
 
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
 import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -10,8 +13,11 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.kunzhang1110.eventlog.models.RowData;
+import com.kunzhang1110.eventlog.models.AppEvent;
+import com.kunzhang1110.eventlog.models.AppModel;
+import com.kunzhang1110.eventlog.models.AppUsage;
 
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
@@ -19,21 +25,40 @@ import java.util.List;
 public class ListAdapter extends RecyclerView.Adapter<ListAdapter.ViewHolder> {
 
     private final DateTimeFormatter dateTimeFormatter;
-    private List<RowData> rowDataList = new ArrayList<>();
+    private List<? extends AppModel> data = new ArrayList<>();
 
-    public static class ViewHolder extends RecyclerView.ViewHolder {
+    private final Context context;
+
+
+    public class ViewHolder extends RecyclerView.ViewHolder {
         private final TextView appName;
         private final ImageView appIcon;
         private final TextView time;
-        private final TextView additional;
+        private final TextView subText;
 
-        public ViewHolder(View view) {
+
+        protected ViewHolder(View view) {
             super(view);
             appName = view.findViewById(R.id.textview_row_app_name);
             appIcon = view.findViewById(R.id.imageview_row_app_icon);
             time = view.findViewById(R.id.textview_row_time);
-            additional = view.findViewById(R.id.textview_row_additional);
+            subText = view.findViewById(R.id.textview_row_additional);
+
+
+            view.setOnLongClickListener(v -> {
+                        ClipboardManager clipboardManager = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
+                        int index = getAdapterPosition();
+                        if (index < 1) return true;
+                        String startTimeText = getRoundedTimeString(data.get(index).time);
+                        String endTimeText = getRoundedTimeString(data.get(index - 1).time);
+                        ClipData clipData = ClipData.newPlainText("label", startTimeText + endTimeText);
+                        // Set the ClipData to the clipboard
+                        clipboardManager.setPrimaryClip(clipData);
+                        return true;
+                    }
+            );
         }
+
 
         public TextView getAppName() {
             return appName;
@@ -47,45 +72,67 @@ public class ListAdapter extends RecyclerView.Adapter<ListAdapter.ViewHolder> {
             return time;
         }
 
-        public TextView getAdditional() {
-            return additional;
+        public TextView getSubText() {
+            return subText;
         }
+
+
     }
 
-    public ListAdapter(DateTimeFormatter dateTimeFormatter) {
+
+    public ListAdapter(Context context, DateTimeFormatter dateTimeFormatter) {
+        this.context = context;
         this.dateTimeFormatter = dateTimeFormatter;
+    }
+
+
+    public static String getRoundedTimeString(LocalDateTime dateTime) {
+        int minutes = dateTime.getMinute();
+        int roundedMinutes = (minutes / 5) * 5;
+        return dateTime.withMinute(roundedMinutes).format(DateTimeFormatter.ofPattern("HHmm"));
     }
 
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(ViewGroup viewGroup, int viewType) {
+
         View view = LayoutInflater.from(viewGroup.getContext()).inflate(R.layout.row, viewGroup, false);
+
         return new ViewHolder(view);
     }
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder viewHolder, final int position) {
-        RowData usageHistory = rowDataList.get(position);
-        Long durationInSeconds = usageHistory.durationInSeconds;
 
-        if (durationInSeconds != null) {
-            int textColor = (durationInSeconds >= 1800) ? Color.RED : Color.BLACK;
-            viewHolder.getAppName().setTextColor(textColor);
-            viewHolder.getAdditional().setTextColor(textColor);
+        AppModel appModel = data.get(position);
+        if (appModel instanceof AppUsage) {
+            Long durationInSeconds = ((AppUsage) appModel).durationInSeconds;
+
+            if (durationInSeconds != null) {
+                int textColor = (durationInSeconds >= 1800) ? Color.RED : Color.BLACK;
+                viewHolder.getAppName().setTextColor(textColor);
+                viewHolder.getSubText().setTextColor(textColor);
+            }
+            viewHolder.getSubText().setText(((AppUsage) appModel).durationInText);
+        }
+        if (appModel instanceof AppEvent) {
+            viewHolder.getSubText().setText(((AppEvent) appModel).eventType);
+            viewHolder.getAppName().setTextColor(Color.BLACK);
+            viewHolder.getSubText().setTextColor(Color.BLACK);
         }
 
-        viewHolder.getAppName().setText(usageHistory.appName);
-        viewHolder.getTime().setText(dateTimeFormatter.format(usageHistory.time));
-        viewHolder.getAdditional().setText(rowDataList.get(position).additional);
-        viewHolder.getAppIcon().setImageDrawable(usageHistory.appIcon);
+        viewHolder.getAppName().setText(appModel.appName);
+        viewHolder.getTime().setText(dateTimeFormatter.format(appModel.time));
+
+        viewHolder.getAppIcon().setImageDrawable(appModel.appIcon);
     }
 
     @Override
     public int getItemCount() {
-        return rowDataList.size();
+        return data.size();
     }
 
-    public void setRowDataList(List<RowData> rowDataList) {
-        this.rowDataList = rowDataList;
+    public void setData(ArrayList<? extends AppModel> appModels) {
+        this.data = appModels;
     }
 }

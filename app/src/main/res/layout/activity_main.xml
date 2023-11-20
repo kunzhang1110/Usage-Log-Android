@@ -32,7 +32,6 @@
                     android:layout_marginEnd="@dimen/btn_margin_end"
                     android:layout_marginBottom="@dimen/btn_margin_bottom"
                     android:text="@string/btn_concise"
-                    android:textColor="@color/design_default_color_primary"
                     android:textSize="@dimen/btn_text_size" />
 
                 <Button
@@ -79,7 +78,8 @@
                 android:contentDescription="@string/fab_description"
                 android:outlineAmbientShadowColor="@color/black"
                 android:outlineSpotShadowColor="@color/black"
-                android:src="@drawable/arrow" />
+                android:src="@drawable/arrow"
+                app:backgroundTint="@color/md_theme_light_primaryContainer" />
         </RelativeLayout>
     </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 </RelativeLayout>

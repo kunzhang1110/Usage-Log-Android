@@ -16,8 +16,9 @@ import android.util.Log;
 import android.widget.Button;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
-import com.kunzhang1110.eventlog.models.CustomEvent;
-import com.kunzhang1110.eventlog.models.RowData;
+import com.kunzhang1110.eventlog.models.AppEvent;
+import com.kunzhang1110.eventlog.models.AppModel;
+import com.kunzhang1110.eventlog.models.AppUsage;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -38,10 +39,10 @@ public class MainActivity extends AppCompatActivity {
     private ListAdapter listAdapter;
     private SwipeRefreshLayout swipeRefreshLayout;
     private Button btnConcise, btnVerbose, btnRaw;
-    private final ArrayList<RowData> rawRowDataList = new ArrayList<>();
-    private final ArrayList<RowData> verboseRowDataList = new ArrayList<>();
-    private final ArrayList<RowData> conciseRowDataList = new ArrayList<>();
-    private String CurrentRowDataFlag = "Verbose";
+    private final ArrayList<AppEvent> appEvents = new ArrayList<>();
+    private final ArrayList<AppUsage> appUsages = new ArrayList<>();
+
+    private String currentPressedTab = "Verbose";
 
     private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
@@ -72,7 +73,7 @@ public class MainActivity extends AppCompatActivity {
             new ArrayList<>((Arrays.asList("Permission controller", "Pixel Launcher")));
 
     private static final Calendar CAL = Calendar.getInstance();
-    private static final int DAYS = 2; //days in which events are included
+    private static final int DAYS = 1; //days in which events are included
 
     static {
         CAL.add(Calendar.DATE, -DAYS);
@@ -84,7 +85,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        listAdapter = new ListAdapter(dateTimeFormatter);
+        listAdapter = new ListAdapter(this, dateTimeFormatter);
         usageStatsManager = (UsageStatsManager) this.getSystemService(Context.USAGE_STATS_SERVICE);
         recyclerView = findViewById(R.id.app_usage_list);
         recyclerView.setAdapter(listAdapter);
@@ -92,15 +93,16 @@ public class MainActivity extends AppCompatActivity {
         swipeRefreshLayout = findViewById(R.id.layout_swipe_refresh);
         swipeRefreshLayout.setOnRefreshListener(() -> {
                     updateList();
-                    switch (CurrentRowDataFlag) {
+                    switch (currentPressedTab) {
                         case "Concise":
-                            updateAdapter(conciseRowDataList);
+                            btnConcise.callOnClick();
                             break;
                         case "Verbose":
-                            updateAdapter(verboseRowDataList);
+                            btnVerbose.callOnClick();
                             break;
                         case "Raw":
-                            updateAdapter(rawRowDataList);
+                            btnRaw.callOnClick();
+                            updateAdapter(appEvents);
                             break;
                     }
                     swipeRefreshLayout.setRefreshing(false);
@@ -112,34 +114,33 @@ public class MainActivity extends AppCompatActivity {
         btnRaw = findViewById(R.id.btn_raw);
 
 
-        btnConcise.setOnClickListener(v -> {//only show each Screen Locked that is longer than 10 min. and the activity before it
-            conciseRowDataList.clear();
-            for (int i = 1; i < verboseRowDataList.size(); i++) {
-                RowData rowData = verboseRowDataList.get(i);
-                if (rowData.appName.equals("Screen Locked") & (rowData.durationInSeconds >= 600)) {
-                    conciseRowDataList.add(verboseRowDataList.get(i - 1));
-                    conciseRowDataList.add(rowData);
+        btnConcise.setOnClickListener(v -> {//only show each Screen Locked that is longer than 20 mins. and the activity before it
+            ArrayList<AppUsage> list = new ArrayList<>();
+            for (int i = 1; i < appUsages.size(); i++) {
+                AppUsage appUsage = appUsages.get(i);
+                if (appUsage.appName.equals("Screen Locked") & (appUsage.durationInSeconds >= 1200)) {
+                    list.add(appUsages.get(i - 1));
+                    list.add(appUsage);
                 }
             }
-            updateAdapter(conciseRowDataList);
+            updateAdapter(list);
             highlightButton(btnConcise);
-            CurrentRowDataFlag = "Concise";
+            currentPressedTab = "Concise";
         });
         btnVerbose.setOnClickListener(v -> {
-            updateAdapter(verboseRowDataList);
+            updateAdapter(appUsages);
             highlightButton(btnVerbose);
-            CurrentRowDataFlag = "Verbose";
+            currentPressedTab = "Verbose";
         });
         btnRaw.setOnClickListener(v -> {
-            updateAdapter(rawRowDataList);
+            updateAdapter(appEvents);
             highlightButton(btnRaw);
-            CurrentRowDataFlag = "Raw";
+            currentPressedTab = "Raw";
 
         });
 
         FloatingActionButton fab = findViewById(R.id.fab);
         fab.setOnClickListener(v -> recyclerView.scrollToPosition(0));
-
         updateList();
         btnConcise.callOnClick(); //click btn concise
     }
@@ -149,9 +150,9 @@ public class MainActivity extends AppCompatActivity {
 
         UsageEvents usageEvents = usageStatsManager.queryEvents(CAL.getTimeInMillis(), System.currentTimeMillis());
 
-        Map<String, ArrayList<CustomEvent>> customEventMap = new HashMap<>();
-        verboseRowDataList.clear();
-        rawRowDataList.clear();
+        Map<String, ArrayList<AppEvent>> appNameToAppEventMap = new HashMap<>();
+        appUsages.clear();
+        appEvents.clear();
 
         while (usageEvents.hasNextEvent()) {
             UsageEvents.Event event = new UsageEvents.Event();
@@ -159,71 +160,63 @@ public class MainActivity extends AppCompatActivity {
 
             String packageName = event.getPackageName();
             String eventType = EVENT_TYPE_MAP.get(event.getEventType());
-            if (eventType == null) continue;
+            if (eventType == null || packageName == null) continue;
 
-            CustomEvent customEvent = new CustomEvent();
-            customEvent.eventType = eventType;
-            customEvent.time = LocalDateTime.ofInstant(Instant.ofEpochMilli(event.getTimeStamp()), ZoneId.systemDefault());
+            AppEvent appEvent = new AppEvent(
+            );
+            appEvent.eventType = eventType;
+            appEvent.time = LocalDateTime.ofInstant(Instant.ofEpochMilli(event.getTimeStamp()), ZoneId.systemDefault());
 
             try {//get app name
                 PackageManager packageManager = getPackageManager();
                 ApplicationInfo appInfo = packageManager.getApplicationInfo(packageName, PackageManager.GET_META_DATA);
                 String appName = (String) packageManager.getApplicationLabel(appInfo);
                 if (APP_NAME_EXCLUDED_LIST.contains(appName)) continue;
-                customEvent.appName = appName;
+                appEvent.appName = appName;
             } catch (PackageManager.NameNotFoundException e) {
                 Log.w("MyLog", String.format("App info is not found for %s", packageName));
-                customEvent.appName = packageName;
+                appEvent.appName = packageName;
             }
 
             try {//get app icon
-                customEvent.appIcon = getPackageManager().getApplicationIcon(packageName);
+                appEvent.appIcon = getPackageManager().getApplicationIcon(packageName);
             } catch (PackageManager.NameNotFoundException e) {
                 Log.w("MyLog", String.format("App Icon is not found for %s", packageName));
-                customEvent.appIcon = AppCompatResources.getDrawable(this, android.R.drawable.sym_def_app_icon);
+                appEvent.appIcon = AppCompatResources.getDrawable(this, android.R.drawable.sym_def_app_icon);
             }
-            Log.i("here", customEvent.toString());
-//            if (!EVENT_TYPES_FOR_DURATION_LIST.contains(customEvent.eventType)) {
-//
-//            }
-            //add to rawEventList
-            rawRowDataList.add(new RowData(packageName, customEvent.appIcon, customEvent.time, customEvent.eventType));
-
 
             //add to eventsMap
             if (EVENT_TYPES_FOR_DURATION_LIST.contains(eventType)) {
-                customEventMap.computeIfAbsent(customEvent.appName, k -> new ArrayList<>()).add(customEvent);
+                appNameToAppEventMap.computeIfAbsent(appEvent.appName, k -> new ArrayList<>()).add(appEvent);
             }
+            //add to appEvents list
+            appEvents.add(appEvent);
         }
 
-        for (Map.Entry<String, ArrayList<CustomEvent>> entry : customEventMap.entrySet()) {
+        for (Map.Entry<String, ArrayList<AppEvent>> entry : appNameToAppEventMap.entrySet()) {
             String appName = entry.getKey();
-            ArrayList<CustomEvent> eventList = entry.getValue();
+            ArrayList<AppEvent> events = entry.getValue();
 
-            for (int x = 0; x < eventList.size(); x++) {
-                CustomEvent eventX = eventList.get(x);
+            for (int x = 0; x < events.size(); x++) {
+                AppEvent eventX = events.get(x);
 
                 if (isResumedOrNonInteractive(eventX)) {
                     int y = x + 1;
 
-                    while (y < eventList.size() && isResumedOrNonInteractive(eventList.get(y))) {
+                    while (y < events.size() && isResumedOrNonInteractive(events.get(y))) {
                         y++;
                     }
 
-                    if (y < eventList.size()) {
-                        CustomEvent eventY = eventList.get(y);
+                    if (y < events.size()) {
+                        AppEvent eventY = events.get(y);
                         long durationInSeconds = Duration.between(eventX.time, eventY.time).toMillis() / 1000;
-                        long seconds = durationInSeconds % 60;
-                        long minutes = (durationInSeconds / 60) % 60;
-                        long hours = (durationInSeconds / 60) / 60;
-
-                        if (seconds > 0) {
-                            String rowDataAppName = appName.equals("Android System") ? "Screen Locked" : appName;
-                            RowData rowData = new RowData(
-                                    rowDataAppName, eventX.appIcon, eventX.time, hours + "h " + minutes + "m " + seconds + "s"
+                        if (durationInSeconds > 0) {
+                            String name = appName.equals("Android System") ? "Screen Locked" : appName;
+                            AppUsage appUsage = new AppUsage(
+                                    name, eventX.appIcon, eventX.time, durationInSeconds
                             );
-                            rowData.durationInSeconds = durationInSeconds;
-                            verboseRowDataList.add(rowData);
+                            appUsage.durationInSeconds = durationInSeconds;
+                            appUsages.add(appUsage);
                             x = y;
                         }
                     }
@@ -231,20 +224,21 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        Collections.sort(verboseRowDataList);
-        Collections.reverse(verboseRowDataList);
-        Collections.reverse(rawRowDataList); //rawRowDataList is already in order
+        Collections.sort(appUsages);
+        Collections.reverse(appUsages);
+        Collections.reverse(appEvents); //rawRowDataList is already in order
     }
 
     @SuppressLint("NotifyDataSetChanged")
-    private void updateAdapter(ArrayList<RowData> rowDataList) {
-        listAdapter.setRowDataList(rowDataList);
+    private void updateAdapter(ArrayList<? extends AppModel> appModels) {
+
+        listAdapter.setData(appModels);
         listAdapter.notifyDataSetChanged();
     }
 
     private void highlightButton(Button button) {
-        int btnPrimaryColor = getColor(com.google.android.material.R.color.design_default_color_primary);
-        int btnOnColor = getColor(com.google.android.material.R.color.design_default_color_on_primary);
+        int btnPrimaryColor = getColor(R.color.md_theme_light_primary);
+        int btnOnColor = getColor(R.color.md_theme_light_onPrimary);
 
         for (Button b : Arrays.asList(btnVerbose, btnConcise, btnRaw)) {
             b.setBackgroundColor(b.equals(button) ? btnPrimaryColor : btnOnColor);
@@ -252,11 +246,11 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private boolean isResumedOrNonInteractive(CustomEvent event) {
+    private boolean isResumedOrNonInteractive(AppEvent event) {
         return event.eventType.equals("Activity Resumed") || event.eventType.equals("Screen Non-Interactive");
     }
 
-    private boolean isStoppedOrKeyguardHidden(CustomEvent event) {
+    private boolean isStoppedOrKeyguardHidden(AppEvent event) {
         return event.eventType.equals("Activity Stopped") || event.eventType.equals("Keyguard Hidden");
     }
 }
