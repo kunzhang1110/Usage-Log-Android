@@ -1,4 +1,4 @@
-package com.kunzhang1110.eventlog;
+package com.kunzhang1110.usagelog;
 
 import android.content.ClipData;
 import android.content.ClipboardManager;
@@ -13,9 +13,9 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.kunzhang1110.eventlog.models.AppEvent;
-import com.kunzhang1110.eventlog.models.AppModel;
-import com.kunzhang1110.eventlog.models.AppUsage;
+import com.kunzhang1110.usagelog.models.AppEvent;
+import com.kunzhang1110.usagelog.models.AppModel;
+import com.kunzhang1110.usagelog.models.AppActivity;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -105,15 +105,15 @@ public class ListAdapter extends RecyclerView.Adapter<ListAdapter.ViewHolder> {
     public void onBindViewHolder(@NonNull ViewHolder viewHolder, final int position) {
 
         AppModel appModel = data.get(position);
-        if (appModel instanceof AppUsage) {
-            Long durationInSeconds = ((AppUsage) appModel).durationInSeconds;
+        if (appModel instanceof AppActivity) {
+            Long durationInSeconds = ((AppActivity) appModel).durationInSeconds;
 
             if (durationInSeconds != null) {
                 int textColor = (durationInSeconds >= 1800) ? Color.RED : Color.BLACK;
                 viewHolder.getAppName().setTextColor(textColor);
                 viewHolder.getSubText().setTextColor(textColor);
             }
-            viewHolder.getSubText().setText(((AppUsage) appModel).durationInText);
+            viewHolder.getSubText().setText(((AppActivity) appModel).durationInText);
         }
         if (appModel instanceof AppEvent) {
             viewHolder.getSubText().setText(((AppEvent) appModel).eventType);

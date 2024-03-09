@@ -3,11 +3,11 @@ plugins {
 }
 
 android {
-    namespace = "com.kunzhang1110.eventlog"
+    namespace = "com.kunzhang1110.usagelog"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.kunzhang1110.eventlog"
+        applicationId = "com.kunzhang1110.usagelog"
         minSdk = 30
         targetSdk = 33
         versionCode = 1

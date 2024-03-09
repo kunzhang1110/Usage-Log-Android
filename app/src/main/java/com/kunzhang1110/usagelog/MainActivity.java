@@ -1,4 +1,12 @@
-package com.kunzhang1110.eventlog;
+package com.kunzhang1110.usagelog;
+
+import static com.kunzhang1110.usagelog.Constants.APP_NAME_EXCLUDED_LIST;
+
+import static com.kunzhang1110.usagelog.Constants.BEGIN_TIME_IN_MILLIS;
+import static com.kunzhang1110.usagelog.Constants.CONCISE_MIN_TIME_IN_SECONDS;
+import static com.kunzhang1110.usagelog.Constants.DATE_TIME_FORMATTER;
+import static com.kunzhang1110.usagelog.Constants.EVENT_TYPES_FOR_DURATION_LIST;
+import static com.kunzhang1110.usagelog.Constants.EVENT_TYPE_MAP;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.content.res.AppCompatResources;
@@ -9,25 +17,25 @@ import android.annotation.SuppressLint;
 import android.app.usage.UsageEvents;
 import android.app.usage.UsageStatsManager;
 import android.content.Context;
+
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
+
 import android.util.Log;
 import android.widget.Button;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
-import com.kunzhang1110.eventlog.models.AppEvent;
-import com.kunzhang1110.eventlog.models.AppModel;
-import com.kunzhang1110.eventlog.models.AppUsage;
+import com.kunzhang1110.usagelog.models.AppEvent;
+import com.kunzhang1110.usagelog.models.AppModel;
+import com.kunzhang1110.usagelog.models.AppActivity;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Calendar;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -38,54 +46,18 @@ public class MainActivity extends AppCompatActivity {
     private RecyclerView recyclerView;
     private ListAdapter listAdapter;
     private SwipeRefreshLayout swipeRefreshLayout;
-    private Button btnConcise, btnVerbose, btnRaw;
+    private Button btnConcise, btnAll, btnRaw;
     private final ArrayList<AppEvent> appEvents = new ArrayList<>();
-    private final ArrayList<AppUsage> appUsages = new ArrayList<>();
+    private final ArrayList<AppActivity> appActivities = new ArrayList<>();
 
-    private String currentPressedTab = "Verbose";
-
-    private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-
-    private static final Map<Integer, String> EVENT_TYPE_MAP = new HashMap<>();
-
-    static {
-        //These four types are used in calculate duration
-        EVENT_TYPE_MAP.put(UsageEvents.Event.ACTIVITY_RESUMED, "Activity Resumed");
-        EVENT_TYPE_MAP.put(UsageEvents.Event.ACTIVITY_STOPPED, "Activity Stopped");
-        EVENT_TYPE_MAP.put(UsageEvents.Event.SCREEN_NON_INTERACTIVE, "Screen Non-Interactive");
-        EVENT_TYPE_MAP.put(UsageEvents.Event.KEYGUARD_HIDDEN, "Keyguard Hidden");
-        //The followings types are not used in calculate duration
-        EVENT_TYPE_MAP.put(UsageEvents.Event.SCREEN_INTERACTIVE, "Screen Interactive");
-        EVENT_TYPE_MAP.put(UsageEvents.Event.KEYGUARD_SHOWN, "Keyguard Shown");
-        EVENT_TYPE_MAP.put(UsageEvents.Event.ACTIVITY_PAUSED, "Activity Paused");
-        EVENT_TYPE_MAP.put(UsageEvents.Event.FOREGROUND_SERVICE_START, "Foreground Service Start");
-        EVENT_TYPE_MAP.put(UsageEvents.Event.FOREGROUND_SERVICE_STOP, "Foreground Service Stop");
-        EVENT_TYPE_MAP.put(UsageEvents.Event.DEVICE_STARTUP, "Device Startup");
-        EVENT_TYPE_MAP.put(UsageEvents.Event.DEVICE_SHUTDOWN, "Device Shutdown");
-        EVENT_TYPE_MAP.put(UsageEvents.Event.CONFIGURATION_CHANGE, "Configuration Change");
-        EVENT_TYPE_MAP.put(UsageEvents.Event.SHORTCUT_INVOCATION, "Shortcut Invocation");
-        EVENT_TYPE_MAP.put(UsageEvents.Event.USER_INTERACTION, "User Interaction");
-    }
-
-    private static final ArrayList<String> EVENT_TYPES_FOR_DURATION_LIST = //These four types are used in calculate duration
-            new ArrayList<>(Arrays.asList("Activity Resumed", "Activity Stopped", "Screen Non-Interactive", "Keyguard Hidden"));
-    private static final ArrayList<String> APP_NAME_EXCLUDED_LIST = //These Apps are excluded from Event List
-            new ArrayList<>((Arrays.asList("Permission controller", "Pixel Launcher")));
-
-    private static final Calendar CAL = Calendar.getInstance();
-    private static final int DAYS = 1; //days in which events are included
-
-    static {
-        CAL.add(Calendar.DATE, -DAYS);
-    }
-
+    private String currentPressedTab = "All";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        listAdapter = new ListAdapter(this, dateTimeFormatter);
+        listAdapter = new ListAdapter(this, DATE_TIME_FORMATTER);
         usageStatsManager = (UsageStatsManager) this.getSystemService(Context.USAGE_STATS_SERVICE);
         recyclerView = findViewById(R.id.app_usage_list);
         recyclerView.setAdapter(listAdapter);
@@ -97,8 +69,8 @@ public class MainActivity extends AppCompatActivity {
                         case "Concise":
                             btnConcise.callOnClick();
                             break;
-                        case "Verbose":
-                            btnVerbose.callOnClick();
+                        case "All":
+                            btnAll.callOnClick();
                             break;
                         case "Raw":
                             btnRaw.callOnClick();
@@ -110,27 +82,27 @@ public class MainActivity extends AppCompatActivity {
         );
 
         btnConcise = findViewById(R.id.btn_concise);
-        btnVerbose = findViewById(R.id.btn_verbose);
+        btnAll = findViewById(R.id.btn_all);
         btnRaw = findViewById(R.id.btn_raw);
 
 
-        btnConcise.setOnClickListener(v -> {//only show each Screen Locked that is longer than 20 mins. and the activity before it
-            ArrayList<AppUsage> list = new ArrayList<>();
-            for (int i = 1; i < appUsages.size(); i++) {
-                AppUsage appUsage = appUsages.get(i);
-                if (appUsage.appName.equals("Screen Locked") & (appUsage.durationInSeconds >= 1200)) {
-                    list.add(appUsages.get(i - 1));
-                    list.add(appUsage);
+        btnConcise.setOnClickListener(v -> {//only show each Screen Locked that is longer than x min. and the activity before it
+            ArrayList<AppActivity> list = new ArrayList<>();
+            for (int i = 1; i < appActivities.size(); i++) {
+                AppActivity appActivity = appActivities.get(i);
+                if (appActivity.appName.equals("Screen Locked") & (appActivity.durationInSeconds >= CONCISE_MIN_TIME_IN_SECONDS)) {
+                    list.add(appActivities.get(i - 1));
+                    list.add(appActivity);
                 }
             }
             updateAdapter(list);
             highlightButton(btnConcise);
             currentPressedTab = "Concise";
         });
-        btnVerbose.setOnClickListener(v -> {
-            updateAdapter(appUsages);
-            highlightButton(btnVerbose);
-            currentPressedTab = "Verbose";
+        btnAll.setOnClickListener(v -> {
+            updateAdapter(appActivities);
+            highlightButton(btnAll);
+            currentPressedTab = "All";
         });
         btnRaw.setOnClickListener(v -> {
             updateAdapter(appEvents);
@@ -148,10 +120,10 @@ public class MainActivity extends AppCompatActivity {
 
     private void updateList() {
 
-        UsageEvents usageEvents = usageStatsManager.queryEvents(CAL.getTimeInMillis(), System.currentTimeMillis());
+        UsageEvents usageEvents = usageStatsManager.queryEvents(BEGIN_TIME_IN_MILLIS, System.currentTimeMillis());
 
         Map<String, ArrayList<AppEvent>> appNameToAppEventMap = new HashMap<>();
-        appUsages.clear();
+        appActivities.clear();
         appEvents.clear();
 
         while (usageEvents.hasNextEvent()) {
@@ -212,11 +184,11 @@ public class MainActivity extends AppCompatActivity {
                         long durationInSeconds = Duration.between(eventX.time, eventY.time).toMillis() / 1000;
                         if (durationInSeconds > 0) {
                             String name = appName.equals("Android System") ? "Screen Locked" : appName;
-                            AppUsage appUsage = new AppUsage(
+                            AppActivity appActivity = new AppActivity(
                                     name, eventX.appIcon, eventX.time, durationInSeconds
                             );
-                            appUsage.durationInSeconds = durationInSeconds;
-                            appUsages.add(appUsage);
+                            appActivity.durationInSeconds = durationInSeconds;
+                            appActivities.add(appActivity);
                             x = y;
                         }
                     }
@@ -224,8 +196,8 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        Collections.sort(appUsages);
-        Collections.reverse(appUsages);
+        Collections.sort(appActivities);
+        Collections.reverse(appActivities);
         Collections.reverse(appEvents); //rawRowDataList is already in order
     }
 
@@ -240,7 +212,7 @@ public class MainActivity extends AppCompatActivity {
         int btnPrimaryColor = getColor(R.color.md_theme_light_primary);
         int btnOnColor = getColor(R.color.md_theme_light_onPrimary);
 
-        for (Button b : Arrays.asList(btnVerbose, btnConcise, btnRaw)) {
+        for (Button b : Arrays.asList(btnAll, btnConcise, btnRaw)) {
             b.setBackgroundColor(b.equals(button) ? btnPrimaryColor : btnOnColor);
             b.setTextColor(b.equals(button) ? btnOnColor : btnPrimaryColor);
         }

@@ -1,4 +1,4 @@
-package com.kunzhang1110.eventlog;
+package com.kunzhang1110.usagelog;
 
 import android.content.Context;
 

@@ -1,22 +1,19 @@
-package com.kunzhang1110.eventlog.models;
+package com.kunzhang1110.usagelog.models;
 
 import android.graphics.drawable.Drawable;
 
-import androidx.annotation.NonNull;
-
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 
-public class AppUsage extends AppModel {
+public class AppActivity extends AppModel {
 
     public Long durationInSeconds = 0L;
     public String durationInText;
 
-    public AppUsage() {
+    public AppActivity() {
         super();
     }
 
-    public AppUsage(String appName, Drawable appIcon, LocalDateTime time, Long durationInSeconds) {
+    public AppActivity(String appName, Drawable appIcon, LocalDateTime time, Long durationInSeconds) {
         super(appName, appIcon, time);
         this.durationInSeconds = durationInSeconds;
 

@@ -13,6 +13,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "EventLog"
+rootProject.name = "UsageLog"
 include(":app")
  

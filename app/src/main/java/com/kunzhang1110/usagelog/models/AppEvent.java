@@ -1,11 +1,8 @@
-package com.kunzhang1110.eventlog.models;
+package com.kunzhang1110.usagelog.models;
 
 import android.graphics.drawable.Drawable;
 
-import androidx.annotation.NonNull;
-
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 
 public class AppEvent extends AppModel {
 

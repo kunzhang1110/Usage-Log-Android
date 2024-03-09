@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">EventLog</string>
+    <string name="app_name">UsageLog</string>
     <string name="btn_concise">Concise</string>
     <string name="btn_verbose">All</string>
     <string name="btn_raw">Raw</string>
