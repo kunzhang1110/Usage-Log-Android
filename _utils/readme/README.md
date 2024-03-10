@@ -28,7 +28,7 @@ an activity starting from 11:00 to 14:00, the copied text is "06000830”.
 Pressing on the bottom right floating button will scroll to the top of
 the list.
 
-<img src="_img/media/image1.png"
+<img src="_imgs/media/image1.png"
 style="width:7.27527in;height:4.79172in" />
 
 ## Getting Started

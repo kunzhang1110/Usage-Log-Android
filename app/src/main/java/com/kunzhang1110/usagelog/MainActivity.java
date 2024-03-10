@@ -14,14 +14,17 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import android.annotation.SuppressLint;
+import android.app.AppOpsManager;
 import android.app.usage.UsageEvents;
 import android.app.usage.UsageStatsManager;
 import android.content.Context;
 
+import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 
+import android.provider.Settings;
 import android.util.Log;
 import android.widget.Button;
 
@@ -49,14 +52,32 @@ public class MainActivity extends AppCompatActivity {
     private Button btnConcise, btnAll, btnRaw;
     private final ArrayList<AppEvent> appEvents = new ArrayList<>();
     private final ArrayList<AppActivity> appActivities = new ArrayList<>();
-
     private String currentPressedTab = "All";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
 
+        setContentView(R.layout.activity_main);
+        if (!hasUsageAccessPermission()) {
+            Intent intent = new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS);
+            startActivity(intent);
+        } else {
+            init();
+        }
+
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        if (hasUsageAccessPermission()) {
+            init();
+        }
+    }
+
+    private void init() {
         listAdapter = new ListAdapter(this, DATE_TIME_FORMATTER);
         usageStatsManager = (UsageStatsManager) this.getSystemService(Context.USAGE_STATS_SERVICE);
         recyclerView = findViewById(R.id.app_usage_list);
@@ -116,7 +137,6 @@ public class MainActivity extends AppCompatActivity {
         updateList();
         btnConcise.callOnClick(); //click btn concise
     }
-
 
     private void updateList() {
 
@@ -207,6 +227,15 @@ public class MainActivity extends AppCompatActivity {
         listAdapter.setData(appModels);
         listAdapter.notifyDataSetChanged();
     }
+
+    private boolean hasUsageAccessPermission() {
+        // Check if permission is granted
+        AppOpsManager appOps = (AppOpsManager) getSystemService(Context.APP_OPS_SERVICE);
+        int mode = appOps.unsafeCheckOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS,
+                android.os.Process.myUid(), getPackageName());
+        return mode == AppOpsManager.MODE_ALLOWED;
+    }
+
 
     private void highlightButton(Button button) {
         int btnPrimaryColor = getColor(R.color.md_theme_light_primary);

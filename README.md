@@ -5,7 +5,7 @@ The app is built using Native Android.
 
 ## Description
 
-Event Log converts UsageStatsManager event data and calculates how long
+Usage Log converts UsageStatsManager event data and calculates how long
 an app has been used. The results are displayed in human-readable
 formats, as follows:
 
@@ -21,12 +21,15 @@ exceeding 20 minutes are highlighted in red.
 
 Swiping down will update the content with new entries.
 
-Long pressed on an activity entry will copy the start time and end time
-of the activity to clipboard in the format of “hhmmhhmm”. For example
-for an activity starting from 11:00 to 14:00, the copied text is
-"06000830”.
+Long pressing on an activity will copy the start time and end time of
+the activity to clipboard in the format of “hhmmhhmm”. For example for
+an activity starting from 11:00 to 14:00, the copied text is "06000830”.
 
-<img src="_img/media/image1.png" style="width:7in;height:4.61042in" />
+Pressing on the bottom right floating button will scroll to the top of
+the list.
+
+<img src="_imgs/media/image1.png"
+style="width:7.27527in;height:4.79172in" />
 
 ## Getting Started
 
