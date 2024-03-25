@@ -116,8 +116,6 @@ public class MainActivity extends AppCompatActivity {
         btnCopy = findViewById(R.id.btn_copy);
 
         btnConcise.setOnClickListener(v -> {//only show each Screen Locked that is longer than x min. and the activity before it
-
-
             updateAdapter(appActivitiesConcise);
             highlightButton(btnConcise);
             btnCopy.setVisibility(View.VISIBLE);
@@ -138,7 +136,7 @@ public class MainActivity extends AppCompatActivity {
 
 
         btnCopy.setOnClickListener(v -> {
-            // copy all event time that are between [sessionStartTime] and [sessionEndTime] onto clipboard.
+            // copy all event times that are between [sessionStartTime] and [sessionEndTime] onto clipboard.
             LocalTime sessionStartTime = LocalTime.of(22, 0); // 23:00 (11:00 PM)
             LocalTime sessionEndTime = LocalTime.of(8, 0);    // 08:00 (8:00 AM) the next day
             List<String> copyText = new ArrayList<>();
@@ -170,7 +168,6 @@ public class MainActivity extends AppCompatActivity {
         appActivities.clear();
         appActivitiesConcise.clear();
         appEvents.clear();
-
 
         while (usageEvents.hasNextEvent()) {
             UsageEvents.Event event = new UsageEvents.Event();
