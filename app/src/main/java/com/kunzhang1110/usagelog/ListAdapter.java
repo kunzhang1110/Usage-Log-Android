@@ -4,6 +4,7 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.graphics.Color;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -17,6 +18,7 @@ import com.kunzhang1110.usagelog.models.AppEvent;
 import com.kunzhang1110.usagelog.models.AppModel;
 import com.kunzhang1110.usagelog.models.AppActivity;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -49,6 +51,17 @@ public class ListAdapter extends RecyclerView.Adapter<ListAdapter.ViewHolder> {
                         ClipboardManager clipboardManager = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
                         int index = getAdapterPosition();
                         if (index < 1) return true;
+
+                        if (index < data.size() - 1) {
+                            // if the time difference between this event and previous event start time is less than 5 minutes
+                            Duration duration = Duration.between(data.get(index + 1).time, data.get(index).time);
+                            if (duration.toMinutes() < 5) {
+                                // add five minutes toe this event start time
+                                data.get(index).time = data.get(index).time.plusMinutes(5);
+                            }
+                        }
+
+
                         String startTimeText = getRoundedTimeString(data.get(index).time);
                         String endTimeText = getRoundedTimeString(data.get(index - 1).time);
                         ClipData clipData = ClipData.newPlainText("label", startTimeText + endTimeText);
@@ -86,6 +99,7 @@ public class ListAdapter extends RecyclerView.Adapter<ListAdapter.ViewHolder> {
     }
 
 
+    // rounded to the nearest finve minute
     public static String getRoundedTimeString(LocalDateTime dateTime) {
         int minutes = dateTime.getMinute();
         int roundedMinutes = (minutes / 5) * 5;
