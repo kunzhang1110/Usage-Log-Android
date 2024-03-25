@@ -4,7 +4,6 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.graphics.Color;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -18,8 +17,6 @@ import com.kunzhang1110.usagelog.models.AppEvent;
 import com.kunzhang1110.usagelog.models.AppModel;
 import com.kunzhang1110.usagelog.models.AppActivity;
 
-import java.time.Duration;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
@@ -46,25 +43,12 @@ public class ListAdapter extends RecyclerView.Adapter<ListAdapter.ViewHolder> {
             time = view.findViewById(R.id.textview_row_time);
             subText = view.findViewById(R.id.textview_row_additional);
 
-
             view.setOnLongClickListener(v -> {
                         ClipboardManager clipboardManager = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
                         int index = getAdapterPosition();
                         if (index < 1) return true;
 
-                        if (index < data.size() - 1) {
-                            // if the time difference between this event and previous event start time is less than 5 minutes
-                            Duration duration = Duration.between(data.get(index + 1).time, data.get(index).time);
-                            if (duration.toMinutes() < 5) {
-                                // add five minutes toe this event start time
-                                data.get(index).time = data.get(index).time.plusMinutes(5);
-                            }
-                        }
-
-
-                        String startTimeText = getRoundedTimeString(data.get(index).time);
-                        String endTimeText = getRoundedTimeString(data.get(index - 1).time);
-                        ClipData clipData = ClipData.newPlainText("label", startTimeText + endTimeText);
+                        ClipData clipData = ClipData.newPlainText("label", Utils.getEventTimeText(index, data));
                         // Set the ClipData to the clipboard
                         clipboardManager.setPrimaryClip(clipData);
                         return true;
@@ -88,8 +72,6 @@ public class ListAdapter extends RecyclerView.Adapter<ListAdapter.ViewHolder> {
         public TextView getSubText() {
             return subText;
         }
-
-
     }
 
 
@@ -98,13 +80,6 @@ public class ListAdapter extends RecyclerView.Adapter<ListAdapter.ViewHolder> {
         this.dateTimeFormatter = dateTimeFormatter;
     }
 
-
-    // rounded to the nearest finve minute
-    public static String getRoundedTimeString(LocalDateTime dateTime) {
-        int minutes = dateTime.getMinute();
-        int roundedMinutes = (minutes / 5) * 5;
-        return dateTime.withMinute(roundedMinutes).format(DateTimeFormatter.ofPattern("HHmm"));
-    }
 
     @NonNull
     @Override
@@ -123,7 +98,7 @@ public class ListAdapter extends RecyclerView.Adapter<ListAdapter.ViewHolder> {
             Long durationInSeconds = ((AppActivity) appModel).durationInSeconds;
 
             if (durationInSeconds != null) {
-                int textColor = (durationInSeconds >= 1800) ? Color.RED : Color.BLACK;
+                int textColor = (durationInSeconds >= Constants.CONCISE_MIN_TIME_IN_SECONDS) ? Color.RED : Color.BLACK;
                 viewHolder.getAppName().setTextColor(textColor);
                 viewHolder.getSubText().setTextColor(textColor);
             }

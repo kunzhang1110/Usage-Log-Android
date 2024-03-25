@@ -24,6 +24,7 @@
                 android:gravity="center"
                 tools:context=".EventLogFragment">
 
+
                 <Button
                     android:id="@+id/btn_concise"
                     style="?android:attr/buttonBarButtonStyle"
@@ -51,12 +52,23 @@
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="@dimen/btn_margin_bottom"
                     android:text="@string/btn_raw"
-
                     android:textSize="@dimen/btn_text_size" />
+
+                <ImageButton
+                    android:id="@+id/btn_copy"
+                    style="?android:attr/buttonBarButtonStyle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+
+                    android:contentDescription="@string/btn_copy"
+                    app:srcCompat="@drawable/copy" />
+
+
             </LinearLayout>
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/app_usage_list"
+
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="50dp"
