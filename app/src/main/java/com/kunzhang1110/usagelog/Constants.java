@@ -51,6 +51,5 @@ class Constants {
         BEGIN_TIME_IN_MILLIS = CAL.getTimeInMillis();
     }
 
-    static final int CONCISE_MIN_TIME_IN_SECONDS = 1200;
-
+    static final int CONCISE_MIN_TIME_IN_SECONDS = 1200;//20 min.
 }
