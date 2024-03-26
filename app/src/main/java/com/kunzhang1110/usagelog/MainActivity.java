@@ -35,7 +35,7 @@ import android.widget.ImageButton;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.kunzhang1110.usagelog.models.AppEvent;
 import com.kunzhang1110.usagelog.models.AppModel;
-import com.kunzhang1110.usagelog.models.AppActivity;
+import com.kunzhang1110.usagelog.models.AppUsage;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -49,6 +49,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/** @noinspection SuspiciousNameCombination */
 public class MainActivity extends AppCompatActivity {
 
     private UsageStatsManager usageStatsManager;
@@ -58,9 +59,8 @@ public class MainActivity extends AppCompatActivity {
     private Button btnConcise, btnAll, btnRaw;
     private ImageButton btnCopy;
     private final ArrayList<AppEvent> appEvents = new ArrayList<>();
-
-    private final ArrayList<AppActivity> appActivities = new ArrayList<>();
-    private final ArrayList<AppActivity> appActivitiesConcise = new ArrayList<>();
+    private final ArrayList<AppUsage> appUsages = new ArrayList<>();
+    private final ArrayList<AppUsage> appConciseUsages = new ArrayList<>();
     private String currentPressedTab = "All";
 
     @Override
@@ -94,7 +94,7 @@ public class MainActivity extends AppCompatActivity {
 
         swipeRefreshLayout = findViewById(R.id.layout_swipe_refresh);
         swipeRefreshLayout.setOnRefreshListener(() -> {
-            updateList();
+            updateData();
             switch (currentPressedTab) {
                 case "Concise":
                     btnConcise.callOnClick();
@@ -115,14 +115,15 @@ public class MainActivity extends AppCompatActivity {
         btnRaw = findViewById(R.id.btn_raw);
         btnCopy = findViewById(R.id.btn_copy);
 
-        btnConcise.setOnClickListener(v -> {//only show each Screen Locked that is longer than x min. and the activity before it
-            updateAdapter(appActivitiesConcise);
+        btnConcise.setOnClickListener(v -> {// only show each Screen Locked that is longer than x min. and the activity
+                                            // before it
+            updateAdapter(appConciseUsages);
             highlightButton(btnConcise);
             btnCopy.setVisibility(View.VISIBLE);
             currentPressedTab = "Concise";
         });
         btnAll.setOnClickListener(v -> {
-            updateAdapter(appActivities);
+            updateAdapter(appUsages);
             highlightButton(btnAll);
             btnCopy.setVisibility(View.GONE);
             currentPressedTab = "All";
@@ -134,18 +135,19 @@ public class MainActivity extends AppCompatActivity {
             currentPressedTab = "Raw";
         });
 
-
         btnCopy.setOnClickListener(v -> {
-            // copy all event times that are between [sessionStartTime] and [sessionEndTime] onto clipboard.
+            // copy all event times that are between [sessionStartTime] and [sessionEndTime]
+            // onto clipboard.
             LocalTime sessionStartTime = LocalTime.of(22, 0); // 23:00 (11:00 PM)
-            LocalTime sessionEndTime = LocalTime.of(8, 0);    // 08:00 (8:00 AM) the next day
+            LocalTime sessionEndTime = LocalTime.of(8, 0); // 08:00 (8:00 AM) the next day
             List<String> copyText = new ArrayList<>();
 
-            for (int index = appActivitiesConcise.size() - 1; index > 0; index--) {
-                Long durationInSeconds = appActivitiesConcise.get(index).durationInSeconds;
-                LocalTime activityStartTime = appActivitiesConcise.get(index).time.toLocalTime();
-                if ((activityStartTime.isAfter(sessionStartTime) || activityStartTime.isBefore(sessionEndTime)) & durationInSeconds > CONCISE_MIN_TIME_IN_SECONDS) {
-                    copyText.add(Utils.getEventTimeText(index, appActivitiesConcise));
+            for (int index = appConciseUsages.size() - 1; index > 0; index--) {
+                Long durationInSeconds = appConciseUsages.get(index).durationInSeconds;
+                LocalTime activityStartTime = appConciseUsages.get(index).time.toLocalTime();
+                if ((activityStartTime.isAfter(sessionStartTime) || activityStartTime.isBefore(sessionEndTime))
+                        & durationInSeconds > CONCISE_MIN_TIME_IN_SECONDS) {
+                    copyText.add(Utils.getAppModelTimeText(appConciseUsages, index));
                 }
             }
             ClipData clipData = ClipData.newPlainText("label", String.join(" ", copyText));
@@ -156,17 +158,17 @@ public class MainActivity extends AppCompatActivity {
 
         FloatingActionButton fab = findViewById(R.id.fab);
         fab.setOnClickListener(v -> recyclerView.scrollToPosition(0));
-        updateList();
-        btnConcise.callOnClick(); //click btn concise
+        updateData();
+        btnConcise.callOnClick(); // click btn concise
     }
 
-    private void updateList() {
+    private void updateData() {
 
         UsageEvents usageEvents = usageStatsManager.queryEvents(BEGIN_TIME_IN_MILLIS, System.currentTimeMillis());
 
         Map<String, ArrayList<AppEvent>> appNameToAppEventMap = new HashMap<>();
-        appActivities.clear();
-        appActivitiesConcise.clear();
+        appUsages.clear();
+        appConciseUsages.clear();
         appEvents.clear();
 
         while (usageEvents.hasNextEvent()) {
@@ -175,35 +177,37 @@ public class MainActivity extends AppCompatActivity {
 
             String packageName = event.getPackageName();
             String eventType = EVENT_TYPE_MAP.get(event.getEventType());
-            if (eventType == null || packageName == null) continue;
+            if (eventType == null || packageName == null)
+                continue;
 
             AppEvent appEvent = new AppEvent();
             appEvent.eventType = eventType;
             appEvent.time = LocalDateTime.ofInstant(Instant.ofEpochMilli(event.getTimeStamp()), ZoneId.systemDefault());
 
-            try {//get app name
+            try {// get app name
                 PackageManager packageManager = getPackageManager();
                 ApplicationInfo appInfo = packageManager.getApplicationInfo(packageName, PackageManager.GET_META_DATA);
                 String appName = (String) packageManager.getApplicationLabel(appInfo);
-                if (APP_NAME_EXCLUDED_LIST.contains(appName)) continue;
+                if (APP_NAME_EXCLUDED_LIST.contains(appName))
+                    continue;
                 appEvent.appName = appName;
             } catch (PackageManager.NameNotFoundException e) {
                 Log.w("MyLog", String.format("App info is not found for %s", packageName));
                 appEvent.appName = packageName;
             }
 
-            try {//get app icon
+            try {// get app icon
                 appEvent.appIcon = getPackageManager().getApplicationIcon(packageName);
             } catch (PackageManager.NameNotFoundException e) {
                 Log.w("MyLog", String.format("App Icon is not found for %s", packageName));
                 appEvent.appIcon = AppCompatResources.getDrawable(this, android.R.drawable.sym_def_app_icon);
             }
 
-            //add to eventsMap
+            // add to eventsMap
             if (EVENT_TYPES_FOR_DURATION_LIST.contains(eventType)) {
                 appNameToAppEventMap.computeIfAbsent(appEvent.appName, k -> new ArrayList<>()).add(appEvent);
             }
-            //add to appEvents list
+            // add to appEvents list
             appEvents.add(appEvent);
         }
 
@@ -226,9 +230,9 @@ public class MainActivity extends AppCompatActivity {
                         long durationInSeconds = Duration.between(eventX.time, eventY.time).toMillis() / 1000;
                         if (durationInSeconds > 0) {
                             String name = appName.equals("Android System") ? "Screen Locked" : appName;
-                            AppActivity appActivity = new AppActivity(name, eventX.appIcon, eventX.time, durationInSeconds);
+                            AppUsage appActivity = new AppUsage(name, eventX.appIcon, eventX.time, durationInSeconds);
                             appActivity.durationInSeconds = durationInSeconds;
-                            appActivities.add(appActivity);
+                            appUsages.add(appActivity);
                             x = y;
                         }
                     }
@@ -236,15 +240,16 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        Collections.sort(appActivities);
-        Collections.reverse(appActivities);
-        Collections.reverse(appEvents); //rawRowDataList is already in order
+        Collections.sort(appUsages);
+        Collections.reverse(appUsages);
+        Collections.reverse(appEvents); // rawRowDataList is already in order
 
-        for (int i = 1; i < appActivities.size(); i++) {
-            AppActivity appActivity = appActivities.get(i);
-            if (appActivity.appName.equals("Screen Locked") & (appActivity.durationInSeconds >= CONCISE_MIN_TIME_IN_SECONDS)) {
-                appActivitiesConcise.add(appActivities.get(i - 1));
-                appActivitiesConcise.add(appActivity);
+        for (int i = 1; i < appUsages.size(); i++) {
+            AppUsage appActivity = appUsages.get(i);
+            if (appActivity.appName.equals("Screen Locked")
+                    & (appActivity.durationInSeconds >= CONCISE_MIN_TIME_IN_SECONDS)) {
+                appConciseUsages.add(appUsages.get(i - 1));
+                appConciseUsages.add(appActivity);
             }
         }
     }
@@ -259,10 +264,10 @@ public class MainActivity extends AppCompatActivity {
     private boolean hasUsageAccessPermission() {
         // Check if permission is granted
         AppOpsManager appOps = (AppOpsManager) getSystemService(Context.APP_OPS_SERVICE);
-        int mode = appOps.unsafeCheckOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, android.os.Process.myUid(), getPackageName());
+        int mode = appOps.unsafeCheckOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, android.os.Process.myUid(),
+                getPackageName());
         return mode == AppOpsManager.MODE_ALLOWED;
     }
-
 
     private void highlightButton(Button button) {
         int btnPrimaryColor = getColor(R.color.md_theme_light_primary);
@@ -282,4 +287,3 @@ public class MainActivity extends AppCompatActivity {
         return event.eventType.equals("Activity Stopped") || event.eventType.equals("Keyguard Hidden");
     }
 }
-

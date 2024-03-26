@@ -15,7 +15,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.kunzhang1110.usagelog.models.AppEvent;
 import com.kunzhang1110.usagelog.models.AppModel;
-import com.kunzhang1110.usagelog.models.AppActivity;
+import com.kunzhang1110.usagelog.models.AppUsage;
 
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -28,13 +28,11 @@ public class ListAdapter extends RecyclerView.Adapter<ListAdapter.ViewHolder> {
 
     private final Context context;
 
-
     public class ViewHolder extends RecyclerView.ViewHolder {
         private final TextView appName;
         private final ImageView appIcon;
         private final TextView time;
         private final TextView subText;
-
 
         protected ViewHolder(View view) {
             super(view);
@@ -44,18 +42,18 @@ public class ListAdapter extends RecyclerView.Adapter<ListAdapter.ViewHolder> {
             subText = view.findViewById(R.id.textview_row_additional);
 
             view.setOnLongClickListener(v -> {
-                        ClipboardManager clipboardManager = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
-                        int index = getAdapterPosition();
-                        if (index < 1) return true;
+                ClipboardManager clipboardManager = (ClipboardManager) context
+                        .getSystemService(Context.CLIPBOARD_SERVICE);
+                int index = getAdapterPosition();
+                if (index < 1)
+                    return true;
 
-                        ClipData clipData = ClipData.newPlainText("label", Utils.getEventTimeText(index, data));
-                        // Set the ClipData to the clipboard
-                        clipboardManager.setPrimaryClip(clipData);
-                        return true;
-                    }
-            );
+                ClipData clipData = ClipData.newPlainText("label", Utils.getAppModelTimeText(index, data));
+                // Set the ClipData to the clipboard
+                clipboardManager.setPrimaryClip(clipData);
+                return true;
+            });
         }
-
 
         public TextView getAppName() {
             return appName;
@@ -74,12 +72,10 @@ public class ListAdapter extends RecyclerView.Adapter<ListAdapter.ViewHolder> {
         }
     }
 
-
     public ListAdapter(Context context, DateTimeFormatter dateTimeFormatter) {
         this.context = context;
         this.dateTimeFormatter = dateTimeFormatter;
     }
-
 
     @NonNull
     @Override
@@ -94,15 +90,15 @@ public class ListAdapter extends RecyclerView.Adapter<ListAdapter.ViewHolder> {
     public void onBindViewHolder(@NonNull ViewHolder viewHolder, final int position) {
 
         AppModel appModel = data.get(position);
-        if (appModel instanceof AppActivity) {
-            Long durationInSeconds = ((AppActivity) appModel).durationInSeconds;
+        if (appModel instanceof AppUsage) {
+            Long durationInSeconds = ((AppUsage) appModel).durationInSeconds;
 
             if (durationInSeconds != null) {
                 int textColor = (durationInSeconds >= Constants.CONCISE_MIN_TIME_IN_SECONDS) ? Color.RED : Color.BLACK;
                 viewHolder.getAppName().setTextColor(textColor);
                 viewHolder.getSubText().setTextColor(textColor);
             }
-            viewHolder.getSubText().setText(((AppActivity) appModel).durationInText);
+            viewHolder.getSubText().setText(((AppUsage) appModel).durationInText);
         }
         if (appModel instanceof AppEvent) {
             viewHolder.getSubText().setText(((AppEvent) appModel).eventType);
