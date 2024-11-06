@@ -49,7 +49,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/** @noinspection SuspiciousNameCombination */
+/**
+ * @noinspection SuspiciousNameCombination
+ */
 public class MainActivity extends AppCompatActivity {
 
     private UsageStatsManager usageStatsManager;
@@ -116,7 +118,7 @@ public class MainActivity extends AppCompatActivity {
         btnCopy = findViewById(R.id.btn_copy);
 
         btnConcise.setOnClickListener(v -> {// only show each Screen Locked that is longer than x min. and the activity
-                                            // before it
+            // before it
             updateAdapter(appConciseUsages);
             highlightButton(btnConcise);
             btnCopy.setVisibility(View.VISIBLE);
@@ -142,11 +144,17 @@ public class MainActivity extends AppCompatActivity {
             LocalTime sessionEndTime = LocalTime.of(9, 0); // 09:00 (8:00 AM) the next day
             List<String> copyText = new ArrayList<>();
 
+            int findFirst = -1; // the first index of the event before sessionStartTime, used as a flag
             for (int i = appConciseUsages.size() - 1; i > 0; i--) {
                 Long durationInSeconds = appConciseUsages.get(i).durationInSeconds;
                 LocalTime activityStartTime = appConciseUsages.get(i).time.toLocalTime();
-                if ((activityStartTime.isAfter(sessionStartTime) || activityStartTime.isBefore(sessionEndTime))
-                        & durationInSeconds > CONCISE_MIN_TIME_IN_SECONDS) {
+
+                if (activityStartTime.isAfter(sessionStartTime) && findFirst == -1) { // find the first index that is after 22:00
+                    findFirst = i;
+                }
+
+                boolean isInSessionWindow = activityStartTime.isAfter(sessionStartTime) || activityStartTime.isBefore(sessionEndTime);
+                if (isInSessionWindow && durationInSeconds > CONCISE_MIN_TIME_IN_SECONDS && findFirst != -1) {
                     copyText.add(Utils.getAppModelTimeText(appConciseUsages, i));
                 }
             }
