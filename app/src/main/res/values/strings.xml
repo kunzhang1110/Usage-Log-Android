@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">UsageLog</string>
+    <string name="btn_concise">Concise</string>
+    <string name="btn_verbose">All</string>
+    <string name="btn_raw">Raw</string>
+    <string name="imageview_app_icon_description">App Icon</string>
+    <string name="fab_description">Back to top</string>
+    <string name="btn_copy">Copy All</string>
+</resources>

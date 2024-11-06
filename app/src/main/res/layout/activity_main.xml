@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/white"
+    android:orientation="vertical"
+    tools:context=".MainActivity">
+
+    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+        android:id="@+id/layout_swipe_refresh"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                tools:context=".EventLogFragment">
+
+
+                <Button
+                    android:id="@+id/btn_concise"
+                    style="?android:attr/buttonBarButtonStyle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="@dimen/btn_margin_end"
+                    android:layout_marginBottom="@dimen/btn_margin_bottom"
+                    android:text="@string/btn_concise"
+                    android:textSize="@dimen/btn_text_size" />
+
+                <Button
+                    android:id="@+id/btn_all"
+                    style="?android:attr/buttonBarButtonStyle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="@dimen/btn_margin_end"
+                    android:layout_marginBottom="@dimen/btn_margin_bottom"
+                    android:text="@string/btn_verbose"
+                    android:textSize="@dimen/btn_text_size" />
+
+                <Button
+                    android:id="@+id/btn_raw"
+                    style="?android:attr/buttonBarButtonStyle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="@dimen/btn_margin_bottom"
+                    android:text="@string/btn_raw"
+                    android:textSize="@dimen/btn_text_size" />
+
+                <ImageButton
+                    android:id="@+id/btn_copy"
+                    style="?android:attr/buttonBarButtonStyle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+
+                    android:contentDescription="@string/btn_copy"
+                    app:srcCompat="@drawable/copy" />
+
+
+            </LinearLayout>
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/app_usage_list"
+
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="50dp"
+                android:drawSelectorOnTop="true"
+                android:scrollbars="vertical"
+                app:layoutManager="LinearLayoutManager" />
+
+            <com.google.android.material.floatingactionbutton.FloatingActionButton
+                android:id="@+id/fab"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:layout_alignParentBottom="true"
+                android:layout_gravity="end|bottom"
+                android:layout_marginStart="0dp"
+                android:layout_marginTop="0dp"
+                android:layout_marginEnd="12dp"
+                android:layout_marginBottom="16dp"
+                android:contentDescription="@string/fab_description"
+                android:outlineAmbientShadowColor="@color/black"
+                android:outlineSpotShadowColor="@color/black"
+                android:src="@drawable/arrow"
+                app:backgroundTint="@color/md_theme_light_primaryContainer"
+                />
+        </RelativeLayout>
+    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+</RelativeLayout>
