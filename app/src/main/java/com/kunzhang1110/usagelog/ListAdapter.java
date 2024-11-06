@@ -88,10 +88,9 @@ public class ListAdapter extends RecyclerView.Adapter<ListAdapter.ViewHolder> {
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder viewHolder, final int position) {
-
         AppModel appModel = data.get(position);
         if (appModel instanceof AppUsage) {
-            Long durationInSeconds = ((AppUsage) appModel).durationInSeconds;
+            Long durationInSeconds = ((AppUsage) appModel).getDurationInSeconds();
 
             if (durationInSeconds != null) {
                 int textColor = (durationInSeconds >= Constants.CONCISE_MIN_TIME_IN_SECONDS) ? Color.RED : Color.BLACK;

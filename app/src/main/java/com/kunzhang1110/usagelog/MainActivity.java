@@ -4,6 +4,8 @@ import static com.kunzhang1110.usagelog.Constants.APP_NAME_EXCLUDED_LIST;
 
 import static com.kunzhang1110.usagelog.Constants.BEGIN_TIME_IN_MILLIS;
 import static com.kunzhang1110.usagelog.Constants.CONCISE_MIN_TIME_IN_SECONDS;
+import static com.kunzhang1110.usagelog.Constants.COPY_SESSION_END_TIME;
+import static com.kunzhang1110.usagelog.Constants.COPY_SESSION_START_TIME;
 import static com.kunzhang1110.usagelog.Constants.DATE_TIME_FORMATTER;
 import static com.kunzhang1110.usagelog.Constants.EVENT_TYPES_FOR_DURATION_LIST;
 import static com.kunzhang1110.usagelog.Constants.EVENT_TYPE_MAP;
@@ -46,6 +48,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -82,10 +85,6 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-
-        if (hasUsageAccessPermission()) {
-            init();
-        }
     }
 
     private void init() {
@@ -138,22 +137,20 @@ public class MainActivity extends AppCompatActivity {
         });
 
         btnCopy.setOnClickListener(v -> {
-            // copy all event times that are between [sessionStartTime] and [sessionEndTime]
-            // onto clipboard.
-            LocalTime sessionStartTime = LocalTime.of(22, 0); // 22:00 (10:00 PM)
-            LocalTime sessionEndTime = LocalTime.of(9, 0); // 09:00 (8:00 AM) the next day
+            // copy all event times that are between [COPY_SESSION_START_TIME] and [COPY_SESSION_END_TIME] onto clipboard.
             List<String> copyText = new ArrayList<>();
 
-            int findFirst = -1; // the first index of the event before sessionStartTime, used as a flag
+            int findFirst = -1; // the first index of the event before COPY_SESSION_START_TIME, used as a flag
             for (int i = appConciseUsages.size() - 1; i > 0; i--) {
-                Long durationInSeconds = appConciseUsages.get(i).durationInSeconds;
+                Long durationInSeconds = appConciseUsages.get(i).getDurationInSeconds();
                 LocalTime activityStartTime = appConciseUsages.get(i).time.toLocalTime();
 
-                if (activityStartTime.isAfter(sessionStartTime) && findFirst == -1) { // find the first index that is after 22:00
+                if (activityStartTime.isAfter(COPY_SESSION_START_TIME) && findFirst == -1) { // find the first index that is after 22:00
                     findFirst = i;
                 }
 
-                boolean isInSessionWindow = activityStartTime.isAfter(sessionStartTime) || activityStartTime.isBefore(sessionEndTime);
+                boolean isInSessionWindow = activityStartTime.isAfter(COPY_SESSION_START_TIME)
+                        || activityStartTime.isBefore(COPY_SESSION_END_TIME);
                 if (isInSessionWindow && durationInSeconds > CONCISE_MIN_TIME_IN_SECONDS && findFirst != -1) {
                     copyText.add(Utils.getAppModelTimeText(appConciseUsages, i));
                 }
@@ -222,16 +219,18 @@ public class MainActivity extends AppCompatActivity {
             appEvents.add(appEvent);
         }
 
+
         // calculate app usages
         for (Map.Entry<String, ArrayList<AppEvent>> entry : appNameToAppEventMap.entrySet()) {
             String appName = entry.getKey();
             ArrayList<AppEvent> events = entry.getValue();
+            int y;
 
             for (int x = 0; x < events.size(); x++) {
                 AppEvent eventX = events.get(x);
 
                 if (isResumedOrNonInteractive(eventX)) {
-                    int y = x + 1;
+                    y = x + 1;
 
                     while (y < events.size() && !isPausedOrStoppedOrKeyguardHidden(events.get(y))) {
                         y++;
@@ -243,7 +242,7 @@ public class MainActivity extends AppCompatActivity {
                         if (durationInSeconds > 0) {
                             String name = appName.equals("Android System") ? "Screen Locked" : appName;
                             AppUsage appActivity = new AppUsage(name, eventX.appIcon, eventX.time, durationInSeconds);
-                            appActivity.durationInSeconds = durationInSeconds;
+                            appActivity.setDurationInSeconds(durationInSeconds);
                             appUsages.add(appActivity);
                             x = y;
                         }
@@ -253,14 +252,35 @@ public class MainActivity extends AppCompatActivity {
         }
 
         Collections.sort(appUsages);
+
+        // merge  consecutive activities with the same name
+        Iterator<AppUsage> iterator = appUsages.iterator();
+        AppUsage previousAppUsage = null;
+
+        while (iterator.hasNext()) {
+            AppUsage currentAppUsage = iterator.next();
+
+            if (previousAppUsage != null && previousAppUsage.appName.equals(currentAppUsage.appName)) {
+
+                previousAppUsage.setDurationInSeconds(previousAppUsage.getDurationInSeconds() + currentAppUsage.getDurationInSeconds());
+
+                iterator.remove();
+            } else {
+                previousAppUsage = currentAppUsage;
+            }
+        }
+
+
+
+
+        Collections.reverse(appEvents);
         Collections.reverse(appUsages);
-        Collections.reverse(appEvents); // rawRowDataList is already in order
 
         // calculate concise usages
         for (int i = 1; i < appUsages.size(); i++) {
             AppUsage appActivity = appUsages.get(i);
             if (appActivity.appName.equals("Screen Locked")
-                    & (appActivity.durationInSeconds >= CONCISE_MIN_TIME_IN_SECONDS)) {
+                    & (appActivity.getDurationInSeconds() >= CONCISE_MIN_TIME_IN_SECONDS)) {
                 appConciseUsages.add(appUsages.get(i - 1));
                 appConciseUsages.add(appActivity);
             }
@@ -269,7 +289,6 @@ public class MainActivity extends AppCompatActivity {
 
     @SuppressLint("NotifyDataSetChanged")
     private void updateAdapter(ArrayList<? extends AppModel> appModels) {
-
         listAdapter.setData(appModels);
         listAdapter.notifyDataSetChanged();
     }

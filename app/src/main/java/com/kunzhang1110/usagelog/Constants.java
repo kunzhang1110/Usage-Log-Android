@@ -2,6 +2,7 @@ package com.kunzhang1110.usagelog;
 
 import android.app.usage.UsageEvents;
 
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -36,7 +37,7 @@ class Constants {
             new ArrayList<>(
                     Arrays.asList("Activity Resumed", "Activity Stopped", "Screen Non-Interactive", "Keyguard Hidden"));
     static final ArrayList<String> APP_NAME_EXCLUDED_LIST = // These Apps are excluded from Event List
-            new ArrayList<>((Arrays.asList("Permission controller", "Pixel Launcher")));
+            new ArrayList<>((Arrays.asList("Permission controller", "Pixel Launcher", "Quickstep","System UI")));
 
     static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
@@ -44,8 +45,13 @@ class Constants {
 
     static final long BEGIN_TIME_IN_MILLIS;
     static final Calendar CAL = Calendar.getInstance();
+    static final LocalTime COPY_SESSION_START_TIME;
+    static final LocalTime COPY_SESSION_END_TIME;
+
 
     static {
+        COPY_SESSION_START_TIME = LocalTime.of(9, 0); //
+        COPY_SESSION_END_TIME = LocalTime.of(22, 0); //
         CAL.add(Calendar.DATE, -DAYS_OF_EVENTS_INCLUDED);
         BEGIN_TIME_IN_MILLIS = CAL.getTimeInMillis();
     }
