@@ -140,18 +140,20 @@ public class MainActivity extends AppCompatActivity {
             // copy all event times that are between [COPY_SESSION_START_TIME] and [COPY_SESSION_END_TIME] onto clipboard.
             List<String> copyText = new ArrayList<>();
 
-            int findFirst = -1; // the first index of the event before COPY_SESSION_START_TIME, used as a flag
+            int firstIdx = -1; // the first index of the event before COPY_SESSION_START_TIME, used as a flag
             for (int i = appConciseUsages.size() - 1; i > 0; i--) {
                 Long durationInSeconds = appConciseUsages.get(i).getDurationInSeconds();
-                LocalTime activityStartTime = appConciseUsages.get(i).time.toLocalTime();
+                LocalTime appUsageStartTime = appConciseUsages.get(i).time.toLocalTime();
+                boolean isAfterStartTime = appUsageStartTime.isAfter(COPY_SESSION_START_TIME);
+                boolean isBeforeEndTime = appUsageStartTime.isBefore(COPY_SESSION_END_TIME);
 
-                if (activityStartTime.isAfter(COPY_SESSION_START_TIME) && findFirst == -1) { // find the first index that is after 22:00
-                    findFirst = i;
+                if (isAfterStartTime && firstIdx == -1) { // find the first index that is after 22:00
+                    firstIdx = i;
                 }
 
-                boolean isInSessionWindow = activityStartTime.isAfter(COPY_SESSION_START_TIME)
-                        || activityStartTime.isBefore(COPY_SESSION_END_TIME);
-                if (isInSessionWindow && durationInSeconds > CONCISE_MIN_TIME_IN_SECONDS && findFirst != -1) {
+                if ((isAfterStartTime || isBeforeEndTime)
+                        && durationInSeconds > CONCISE_MIN_TIME_IN_SECONDS
+                        && firstIdx != -1) {
                     copyText.add(Utils.getAppModelTimeText(appConciseUsages, i));
                 }
             }
@@ -229,10 +231,10 @@ public class MainActivity extends AppCompatActivity {
             for (int x = 0; x < events.size(); x++) {
                 AppEvent eventX = events.get(x);
 
-                if (isResumedOrNonInteractive(eventX)) {
+                if (isResumed(eventX)) {
                     y = x + 1;
 
-                    while (y < events.size() && !isPausedOrStoppedOrKeyguardHidden(events.get(y))) {
+                    while (y < events.size() && !isPausedOrStopped(events.get(y))) {
                         y++;
                     }
 
@@ -240,10 +242,9 @@ public class MainActivity extends AppCompatActivity {
                         AppEvent eventY = events.get(y);
                         long durationInSeconds = Duration.between(eventX.time, eventY.time).toMillis() / 1000;
                         if (durationInSeconds > 0) {
-                            String name = appName.equals("Android System") ? "Screen Locked" : appName;
-                            AppUsage appActivity = new AppUsage(name, eventX.appIcon, eventX.time, durationInSeconds);
-                            appActivity.setDurationInSeconds(durationInSeconds);
-                            appUsages.add(appActivity);
+                            AppUsage appUsage = new AppUsage(appName, eventX.appIcon, eventX.time, durationInSeconds);
+                            appUsage.setDurationInSeconds(durationInSeconds);
+                            appUsages.add(appUsage);
                             x = y;
                         }
                     }
@@ -270,21 +271,32 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
+        // calculate screen locked usage from app usages gaps
+        for (int i = 0; i < appUsages.size() - 1; i++) {
+            AppUsage currentAppUsage = appUsages.get(i);
+            AppUsage nextAppUsage = appUsages.get(i + 1);
 
+            LocalDateTime currentAppUsageEndTime = currentAppUsage.time.plusSeconds(currentAppUsage.getDurationInSeconds());
+            Duration timeDiff = Duration.between(currentAppUsageEndTime, nextAppUsage.time);
 
+            if (timeDiff.getSeconds() > 1) {
+                AppUsage sreenLockedAppUsage = new AppUsage(
+                        "Screen Locked",
+                        AppCompatResources.getDrawable(this, android.R.drawable.sym_def_app_icon),
+                        currentAppUsageEndTime, timeDiff.getSeconds());
+                appUsages.add(i + 1, sreenLockedAppUsage);
+                if (sreenLockedAppUsage.getDurationInSeconds() >= CONCISE_MIN_TIME_IN_SECONDS) {
+                    //add long screen locked time to concise list
+                    appConciseUsages.add(sreenLockedAppUsage);
+                    appConciseUsages.add(nextAppUsage);
+                }
+                i++;
+            }
+        }
 
         Collections.reverse(appEvents);
         Collections.reverse(appUsages);
-
-        // calculate concise usages
-        for (int i = 1; i < appUsages.size(); i++) {
-            AppUsage appActivity = appUsages.get(i);
-            if (appActivity.appName.equals("Screen Locked")
-                    & (appActivity.getDurationInSeconds() >= CONCISE_MIN_TIME_IN_SECONDS)) {
-                appConciseUsages.add(appUsages.get(i - 1));
-                appConciseUsages.add(appActivity);
-            }
-        }
+        Collections.reverse(appConciseUsages);
     }
 
     @SuppressLint("NotifyDataSetChanged")
@@ -311,11 +323,11 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private boolean isResumedOrNonInteractive(AppEvent event) {
-        return event.eventType.equals("Activity Resumed") || event.eventType.equals("Screen Non-Interactive");
+    private boolean isResumed(AppEvent event) {
+        return event.eventType.equals("Activity Resumed");
     }
 
-    private boolean isPausedOrStoppedOrKeyguardHidden(AppEvent event) {
-        return event.eventType.equals("Activity Paused") || event.eventType.equals("Activity Stopped") || event.eventType.equals("Keyguard Hidden");
+    private boolean isPausedOrStopped(AppEvent event) {
+        return event.eventType.equals("Activity Paused") || event.eventType.equals("Activity Stopped");
     }
 }

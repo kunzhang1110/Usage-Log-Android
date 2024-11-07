@@ -35,7 +35,7 @@ class Constants {
 
     static final ArrayList<String> EVENT_TYPES_FOR_DURATION_LIST = // These four types are used in calculate duration
             new ArrayList<>(
-                    Arrays.asList("Activity Resumed", "Activity Stopped", "Screen Non-Interactive", "Keyguard Hidden"));
+                    Arrays.asList("Activity Resumed", "Activity Paused","Activity Stopped"));
     static final ArrayList<String> APP_NAME_EXCLUDED_LIST = // These Apps are excluded from Event List
             new ArrayList<>((Arrays.asList("Permission controller", "Pixel Launcher", "Quickstep","System UI")));
 
@@ -50,8 +50,8 @@ class Constants {
 
 
     static {
-        COPY_SESSION_START_TIME = LocalTime.of(9, 0); //
-        COPY_SESSION_END_TIME = LocalTime.of(22, 0); //
+        COPY_SESSION_START_TIME = LocalTime.of(23, 0);
+        COPY_SESSION_END_TIME = LocalTime.of(8, 0);
         CAL.add(Calendar.DATE, -DAYS_OF_EVENTS_INCLUDED);
         BEGIN_TIME_IN_MILLIS = CAL.getTimeInMillis();
     }
