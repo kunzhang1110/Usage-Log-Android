@@ -140,20 +140,25 @@ public class MainActivity extends AppCompatActivity {
             // copy all event times that are between [COPY_SESSION_START_TIME] and [COPY_SESSION_END_TIME] onto clipboard.
             List<String> copyText = new ArrayList<>();
 
-            int firstIdx = -1; // the first index of the event before COPY_SESSION_START_TIME, used as a flag
+
+            LocalDateTime firstStartDateTime = appConciseUsages.get(appConciseUsages.size() - 1).time;//first chronological start date time
+            LocalDateTime referenceDateTime =
+                    LocalDateTime.of(firstStartDateTime.toLocalDate(), LocalTime.of(0, 0));
+
             for (int i = appConciseUsages.size() - 1; i > 0; i--) {
                 Long durationInSeconds = appConciseUsages.get(i).getDurationInSeconds();
-                LocalTime appUsageStartTime = appConciseUsages.get(i).time.toLocalTime();
-                boolean isAfterStartTime = appUsageStartTime.isAfter(COPY_SESSION_START_TIME);
-                boolean isBeforeEndTime = appUsageStartTime.isBefore(COPY_SESSION_END_TIME);
 
-                if (isAfterStartTime && firstIdx == -1) { // find the first index that is after 22:00
-                    firstIdx = i;
-                }
+                LocalDateTime appUsageStartDateTime = appConciseUsages.get(i).time;
 
-                if ((isAfterStartTime || isBeforeEndTime)
+                LocalDateTime sessionStartDateTime =
+                        referenceDateTime.toLocalDate().atTime(COPY_SESSION_START_TIME);
+                LocalDateTime sessionEndDateTime =
+                        referenceDateTime.toLocalDate().plusDays(1).atTime(COPY_SESSION_END_TIME);
+                boolean isInCopySession = appUsageStartDateTime.isAfter(sessionStartDateTime)
+                        && appUsageStartDateTime.isBefore(sessionEndDateTime);
+                if (isInCopySession
                         && durationInSeconds > CONCISE_MIN_TIME_IN_SECONDS
-                        && firstIdx != -1) {
+                ) {
                     copyText.add(Utils.getAppModelTimeText(appConciseUsages, i));
                 }
             }
