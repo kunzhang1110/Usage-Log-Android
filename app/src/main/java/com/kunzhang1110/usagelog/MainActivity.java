@@ -226,7 +226,6 @@ public class MainActivity extends AppCompatActivity {
             appEvents.add(appEvent);
         }
 
-
         // calculate app usages
         for (Map.Entry<String, ArrayList<AppEvent>> entry : appNameToAppEventMap.entrySet()) {
             String appName = entry.getKey();
@@ -258,24 +257,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         Collections.sort(appUsages);
-
-        // merge  consecutive activities with the same name
-        Iterator<AppUsage> iterator = appUsages.iterator();
-        AppUsage previousAppUsage = null;
-
-        while (iterator.hasNext()) {
-            AppUsage currentAppUsage = iterator.next();
-
-            if (previousAppUsage != null && previousAppUsage.appName.equals(currentAppUsage.appName)) {
-
-                previousAppUsage.setDurationInSeconds(previousAppUsage.getDurationInSeconds() + currentAppUsage.getDurationInSeconds());
-
-                iterator.remove();
-            } else {
-                previousAppUsage = currentAppUsage;
-            }
-        }
-
+        
         // calculate screen locked usage from app usages gaps
         for (int i = 0; i < appUsages.size() - 1; i++) {
             AppUsage currentAppUsage = appUsages.get(i);
